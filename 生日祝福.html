@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ 小琦遇19岁生日快乐 ✨</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ffcce6;
+            --secondary: #a8e6ff;
+            --accent: #ffaaa7;
+            --text: #6b5b95;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--text);
+            touch-action: manipulation;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 10;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            max-width: 80%;
+            transform-style: preserve-3d;
+        }
+        
+        /* 英文标题 - 优雅手写体 */
+        .title-en {
+            font-family: 'Dancing Script', cursive;
+            font-size: 3.5rem;
+            margin: 0;
+            color: #ff6b6b;
+            animation: float 3s ease-in-out infinite;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            line-height: 1.2;
+        }
+        
+        /* 中文标题 - 圆润可爱体 */
+        .title-zh {
+            font-family: 'ZCOOL KuaiLe', cursive;
+            font-size: 2.8rem;
+            margin: 10px 0 0;
+            color: #6b5b95;
+            animation: float 3s ease-in-out infinite 0.3s;
+        }
+        
+        /* 正文 - 圆润中文 */
+        p {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 1.5rem;
+            margin: 15px 0;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s forwards;
+            line-height: 1.6;
+        }
+        
+        p:nth-child(1) { animation-delay: 0.5s; }
+        p:nth-child(2) { animation-delay: 1s; }
+        p:nth-child(3) { animation-delay: 1.5s; }
+        
+        .emoji {
+            font-size: 2rem;
+            display: inline-block;
+            animation: bounce 2s infinite;
+        }
+        
+        /* 蛋糕容器 */
+        .cake-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 20px auto 0;
+            animation: float 4s ease-in-out infinite 1s;
+        }
+        
+        /* 蛋糕元素 */
+        .cake {
+            font-size: 5rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: 
+                candleFlicker 2s infinite alternate,
+                rotate 10s infinite linear;
+            transform-origin: center 70%;
+            filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.5));
+        }
+        
+        /* 动画效果 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        @keyframes candleFlicker {
+            0%, 100% { transform: scale(1) rotate(-5deg); }
+            50% { transform: scale(1.05) rotate(5deg); }
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(-5deg); }
+            100% { transform: rotate(5deg); }
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .petal {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+            z-index: 5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title-en">Happy Birthday!</div>
+        <div class="title-zh">生日快乐</div>
+        <p>小琦遇19岁生日快乐！</p>
+        <p>祝你站在舞台上尽兴去做蓬勃生动的梦<span class="emoji">🌈</span></p>
+        <p>天天开心，梦想成真 <span class="emoji">✨</span></p>
+        
+        <div class="cake-container">
+            <div class="cake">🎂</div>
+        </div>
+    </div>
+    
+    <canvas id="fireworks"></canvas>
+    <canvas id="autoFireworks"></canvas>
+    <div id="petals"></div>
+    
+    <script>
+        // 文字动画
+        document.querySelectorAll('p').forEach((p, i) => {
+            p.style.animationDelay = `${i * 0.5 + 0.5}s`;
+        });
+        
+        // ================== 点击烟花效果 ==================
+        const clickCanvas = document.getElementById('fireworks');
+        const clickCtx = clickCanvas.getContext('2d');
+        clickCanvas.width = window.innerWidth;
+        clickCanvas.height = window.innerHeight;
+        
+        class ClickParticle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = Math.random() * 2 + 1;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 5,
+                    y: (Math.random() - 0.5) * 5
+                };
+                this.alpha = 1;
+                this.decay = Math.random() * 0.01 + 0.01;
+            }
+            
+            draw() {
+                clickCtx.save();
+                clickCtx.globalAlpha = this.alpha;
+                clickCtx.beginPath();
+                clickCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                clickCtx.fillStyle = this.color;
+                clickCtx.fill();
+                clickCtx.restore();
+            }
+            
+            update() {
+                this.velocity.y += 0.03;
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.alpha -= this.decay;
+            }
+        }
+        
+        let clickParticles = [];
+        
+        function createClickFirework(x, y) {
+            const colors = ['#ff6b6b', '#ff8e8e', '#ffaaa7', '#a8e6ff', '#dcedc1', '#ffd3b6'];
+            const particleCount = 80;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                clickParticles.push(new ClickParticle(x, y, color));
+            }
+        }
+        
+        function animateClickFireworks() {
+            requestAnimationFrame(animateClickFireworks);
+            clickCtx.fillStyle = 'rgba(168, 230, 255, 0.1)';
+            clickCtx.fillRect(0, 0, clickCanvas.width, clickCanvas.height);
+            
+            clickParticles.forEach((particle, index) => {
+                if (particle.alpha > 0) {
+                    particle.update();
+                    particle.draw();
+                } else {
+                    clickParticles.splice(index, 1);
+                }
+            });
+        }
+        
+        animateClickFireworks();
+        
+        // 点击触发彩色烟花
+        document.addEventListener('click', (e) => {
+            createClickFirework(e.clientX, e.clientY);
+        });
+        
+        // ================== 自动烟花效果 ==================
+        const autoCanvas = document.getElementById('autoFireworks');
+        const autoCtx = autoCanvas.getContext('2d');
+        autoCanvas.width = window.innerWidth;
+        autoCanvas.height = window.innerHeight;
+        
+        class AutoFirework {
+            constructor(x, y, targetX, targetY, color) {
+                this.x = x;
+                this.y = y;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.color = color;
+                this.distanceToTarget = Math.hypot(targetX - x, targetY - y);
+                this.distanceTraveled = 0;
+                this.coordinates = [];
+                this.coordinateCount = 3;
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                this.angle = Math.atan2(targetY - y, targetX - x);
+                this.speed = 2;
+                this.acceleration = 1.03;
+                this.brightness = Math.random() * 50 + 50;
+                this.targetRadius = 1;
+            }
+            
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+                if (this.targetRadius < 8) {
+                    this.targetRadius += 0.2;
+                } else {
+                    this.targetRadius = 1;
+                }
+                this.speed *= this.acceleration;
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+                this.distanceTraveled = Math.hypot(this.x + vx - this.x, this.y + vy - this.y);
+                if (Math.hypot(this.targetX - this.x, this.targetY - this.y) <= this.speed) {
+                    autoFireworks.splice(index, 1);
+                    createAutoParticles(this.targetX, this.targetY, this.color);
+                } else {
+                    this.x += vx;
+                    this.y += vy;
+                }
+            }
+            
+            draw() {
+                autoCtx.beginPath();
+                autoCtx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                autoCtx.lineTo(this.x, this.y);
+                autoCtx.strokeStyle = this.color;
+                autoCtx.lineWidth = 2;
+                autoCtx.stroke();
+            }
+        }
+        
+        class AutoParticle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.coordinates = [];
+                this.coordinateCount = 5;
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 8 + 1;
+                this.friction = 0.97;
+                this.gravity = 0.8;
+                this.color = color;
+                this.brightness = Math.random() * 50 + 50;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.01 + 0.01;
+            }
+            
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                this.alpha -= this.decay;
+                if (this.alpha <= 0.1) {
+                    autoParticles.splice(index, 1);
+                }
+            }
+            
+            draw() {
+                autoCtx.beginPath();
+                autoCtx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                autoCtx.lineTo(this.x, this.y);
+                autoCtx.strokeStyle = `rgba(${this.color}, ${this.alpha})`;
+                autoCtx.lineWidth = 1.5;
+                autoCtx.stroke();
+            }
+        }
+        
+        let autoFireworks = [];
+        let autoParticles = [];
+        let hue = 120;
+        let limiterTotal = 8;
+        let limiterTick = 0;
+        
+        function createAutoParticles(x, y, color) {
+            let particleCount = 40;
+            while (particleCount--) {
+                autoParticles.push(new AutoParticle(x, y, color));
+            }
+        }
+        
+        function animateAutoFireworks() {
+            requestAnimationFrame(animateAutoFireworks);
+            hue += 0.3;
+            autoCtx.globalCompositeOperation = 'destination-out';
+            autoCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            autoCtx.fillRect(0, 0, autoCanvas.width, autoCanvas.height);
+            autoCtx.globalCompositeOperation = 'lighter';
+            
+            let i = autoFireworks.length;
+            while (i--) {
+                autoFireworks[i].draw();
+                autoFireworks[i].update(i);
+            }
+            
+            let j = autoParticles.length;
+            while (j--) {
+                autoParticles[j].draw();
+                autoParticles[j].update(j);
+            }
+            
+            if (limiterTick >= limiterTotal) {
+                let startX = Math.random() * autoCanvas.width;
+                let startY = autoCanvas.height;
+                let targetX = Math.random() * autoCanvas.width;
+                let targetY = Math.random() * autoCanvas.height / 2;
+                autoFireworks.push(new AutoFirework(startX, startY, targetX, targetY, `hsl(${hue}, 100%, 50%)`));
+                limiterTick = 0;
+            } else {
+                limiterTick++;
+            }
+        }
+        
+        animateAutoFireworks();
+        
+        // ================== 花瓣效果 ==================
+        const petalImages = [
+            '🌸', '🌺', '🌻', '🌼', '🌷', '🌹', '🥀', '💐', '🏵️'
+        ];
+        
+        let lastShakeTime = 0;
+        let lastX = window.screenX;
+        let lastY = window.screenY;
+        
+        function createPetal() {
+            const petal = document.createElement('div');
+            petal.className = 'petal';
+            petal.textContent = petalImages[Math.floor(Math.random() * petalImages.length)];
+            petal.style.left = Math.random() * window.innerWidth + 'px';
+            petal.style.top = -50 + 'px';
+            petal.style.fontSize = (Math.random() * 20 + 15) + 'px';
+            petal.style.opacity = Math.random() * 0.5 + 0.5;
+            petal.style.transform = `rotate(${Math.random() * 360}deg)`;
+            
+            document.getElementById('petals').appendChild(petal);
+            
+            const animationDuration = Math.random() * 8 + 5;
+            
+            petal.animate([
+                { top: '-50px', transform: `rotate(${Math.random() * 360}deg)` },
+                { top: window.innerHeight + 'px', transform: `rotate(${Math.random() * 360 + 360}deg)` }
+            ], {
+                duration: animationDuration * 1000,
+                easing: 'linear'
+            });
+            
+            setTimeout(() => {
+                petal.remove();
+            }, animationDuration * 1000);
+        }
+        
+        // 摇动或拖动触发花瓣
+        function checkForShake() {
+            const now = Date.now();
+            if (now - lastShakeTime < 1000) return;
+            
+            const deltaX = Math.abs(window.screenX - lastX);
+            const deltaY = Math.abs(window.screenY - lastY);
+            
+            if (deltaX > 5 || deltaY > 5) {
+                lastShakeTime = now;
+                for (let i = 0; i < 10; i++) {
+                    setTimeout(createPetal, i * 200);
+                }
+            }
+            
+            lastX = window.screenX;
+            lastY = window.screenY;
+        }
+        
+        setInterval(checkForShake, 100);
+        
+        // 背景音乐
+        const audio = new Audio('https://assets.mixkit.co/music/preview/mixkit-happy-birthday-to-you-528.mp3');
+        audio.loop = true;
+        
+        document.addEventListener('click', () => {
+            audio.play().catch(e => console.log('需要用户交互后才能播放音乐'));
+        }, { once: true });
+        
+        // 窗口大小调整
+        window.addEventListener('resize', () => {
+            clickCanvas.width = window.innerWidth;
+            clickCanvas.height = window.innerHeight;
+            autoCanvas.width = window.innerWidth;
+            autoCanvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
